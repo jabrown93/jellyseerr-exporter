@@ -49,6 +49,15 @@ User request counts of an Jellyseerr server are collected with the following lab
 
 You **must** provide the Overseerr address and API key!
 
+## Dev
+
+When developping you can tidy and fmt your code with
+
+```
+docker run -it -e CGO_ENABLED=0 -v $(pwd):/code -w /code golang:1.21-alpine go mod tidy
+docker run -it -e CGO_ENABLED=0 -v $(pwd):/code -w /code golang:1.21-alpine go fmt ./...
+```
+
 ## Original project
 
 This project is a fork from [`WillFantom/overseerr-exporter`](https://github.com/WillFantom/overseerr-exporter), with some improvements. Thanks a lot to him for this work released under a GPL license.

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/opspotes/jellyseerr-exporter/cmd"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {

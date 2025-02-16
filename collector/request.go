@@ -14,8 +14,8 @@ const (
 )
 
 type RequestCollector struct {
-	client           *goverseerr.Overseerr
-	fullData   bool
+	client   *goverseerr.Overseerr
+	fullData bool
 
 	Count *prometheus.Desc
 }
@@ -33,7 +33,7 @@ func NewRequestCollector(client *goverseerr.Overseerr, fullData bool) *RequestCo
 	logrus.Traceln("defining request collector")
 	specificNamespace := "requests"
 	return &RequestCollector{
-		client:         client,
+		client:   client,
 		fullData: fullData,
 
 		Count: prometheus.NewDesc(

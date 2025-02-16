@@ -3,21 +3,21 @@ package cmd
 import (
 	"net/http"
 
+	"github.com/opspotes/jellyseerr-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/willfantom/goverseerr"
-	"github.com/opspotes/jellyseerr-exporter/collector"
 )
 
 // persistent flags
 var (
-	logLevel           string
+	logLevel            string
 	jellyseerrAddress   string
 	jellyseerrAPIKey    string
 	jellyseerrAPILocale string
-	fullData     bool
+	fullData            bool
 )
 
 // instance to use
@@ -26,13 +26,13 @@ var jellyseerr *goverseerr.Overseerr
 var RootCmd = &cobra.Command{
 	Use:   "jellyseerr-exporter",
 	Short: "Export request metrics from Jellyseerr",
-	Long:  `Export request metrics from an Jellyseerr for Prometheus`,
+	Long:  `Export request metrics from a Jellyseerr instance for Prometheus.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupLogger()
 		logrus.WithFields(logrus.Fields{
 			"command": cmd.Name(),
 			"args":    args,
-		}).Debugln("running command")
+		}).Debugln("Running command")
 	},
 	PreRun: func(cmd *cobra.Command, args []string) {
 		setJellyseerr()
@@ -58,7 +58,7 @@ var RootCmd = &cobra.Command{
 		})
 
 		if err := http.ListenAndServe(":9850", nil); err != nil {
-			logrus.WithField("err msg", err.Error()).Fatalln("http server failed: exiting")
+			logrus.WithField("err msg", err.Error()).Fatalln("HTTP server failed: exiting")
 		}
 	},
 }
