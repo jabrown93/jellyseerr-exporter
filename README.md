@@ -39,13 +39,13 @@ User request counts of an Jellyseerr server are collected with the following lab
 
 ## Configuration
 
-| Flag                 |                               Description                               | Default |
-| :------------------- | :---------------------------------------------------------------------: | :------ |
-| `log`                |                 Sets the logging level for the exporter                 | `fatal` |
-| `jellyseerr.address` |                   The URI of the Jellyseerr instance                    |         |
-| `jellyseerr.apiKey`  |              The admin API key of the Jellyseerr instance               |         |
-| `jellyseerr.locale`  |                  The locale of the Jellyseerr instance                  | `en`    |
-| `fullData`           | Do not collect genre and company to reduce API requests and cardinality | `false` |
+| Flag                 |       Env var        |                               Description                               | Default |
+| :------------------- | :------------------: | :---------------------------------------------------------------------: | :------ |
+| `log`                |        `LOG`         |                 Sets the logging level for the exporter                 | `fatal` |
+| `jellyseerr.address` | `JELLYSEERR_ADDRESS` |                   The URI of the Jellyseerr instance                    |         |
+| `jellyseerr.apiKey`  | `JELLYSEERR_APIKEY`  |              The admin API key of the Jellyseerr instance               |         |
+| `jellyseerr.locale`  | `JELLYSEERR_LOCALE`  |                  The locale of the Jellyseerr instance                  | `en`    |
+| `fullData`           |      `FULLDATA`      | Do not collect genre and company to reduce API requests and cardinality | `false` |
 
 You **must** provide the Overseerr address and API key!
 

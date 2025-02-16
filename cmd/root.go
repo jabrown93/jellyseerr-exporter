@@ -2,16 +2,17 @@ package cmd
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/opspotes/jellyseerr-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/willfantom/goverseerr"
 )
 
-// persistent flags
 var (
 	logLevel            string
 	jellyseerrAddress   string
@@ -35,6 +36,21 @@ var RootCmd = &cobra.Command{
 		}).Debugln("Running command")
 	},
 	PreRun: func(cmd *cobra.Command, args []string) {
+		// Get values from viper
+		logLevel = viper.GetString("log")
+		jellyseerrAddress = viper.GetString("jellyseerr.address")
+		jellyseerrAPIKey = viper.GetString("jellyseerr.apiKey")
+		jellyseerrAPILocale = viper.GetString("jellyseerr.locale")
+		fullData = viper.GetBool("fullData")
+
+		// Validate required flags
+		if jellyseerrAddress == "" {
+			logrus.Fatalln("La configuration 'jellyseerr.address' est requise. Fournissez-la via le flag --jellyseerr.address ou la variable d'environnement JELLYSEERR_ADDRESS.")
+		}
+		if jellyseerrAPIKey == "" {
+			logrus.Fatalln("La configuration 'jellyseerr.apiKey' est requise. Fournissez-la via le flag --jellyseerr.apiKey ou la variable d'environnement JELLYSEERR_APIKEY.")
+		}
+
 		setJellyseerr()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -79,14 +95,24 @@ func setJellyseerr() {
 	}
 }
 
-func init() {
-	RootCmd.PersistentFlags().StringVar(&logLevel, "log", "fatal", "set the log level (fatal, error, info, debug, trace)")
+func initConfig() {
+	viper.AutomaticEnv()
+	// Replace points by underscore when parsing env variables
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// jellyseerr setup
+	viper.BindPFlag("log", RootCmd.PersistentFlags().Lookup("log"))
+	viper.BindPFlag("jellyseerr.address", RootCmd.PersistentFlags().Lookup("jellyseerr.address"))
+	viper.BindPFlag("jellyseerr.apiKey", RootCmd.PersistentFlags().Lookup("jellyseerr.apiKey"))
+	viper.BindPFlag("jellyseerr.locale", RootCmd.PersistentFlags().Lookup("jellyseerr.locale"))
+	viper.BindPFlag("fullData", RootCmd.PersistentFlags().Lookup("fullData"))
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	RootCmd.PersistentFlags().StringVar(&logLevel, "log", "fatal", "set the log level (fatal, error, info, debug, trace)")
 	RootCmd.PersistentFlags().StringVar(&jellyseerrAddress, "jellyseerr.address", "", "Address at which Jellyseerr is hosted.")
 	RootCmd.PersistentFlags().StringVar(&jellyseerrAPIKey, "jellyseerr.apiKey", "", "API key for admin access to the Jellyseerr instance.")
 	RootCmd.PersistentFlags().StringVar(&jellyseerrAPILocale, "jellyseerr.locale", "en", "Locale of the Jellyseerr instance.")
 	RootCmd.PersistentFlags().BoolVar(&fullData, "fullData", false, "Reduce scraping and cardinality on requests count metric.")
-	RootCmd.MarkPersistentFlagRequired("jellyseerr.address")
-	RootCmd.MarkPersistentFlagRequired("jellyseerr.api-key")
 }
