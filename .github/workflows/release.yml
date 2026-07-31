@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  # Weekly roll-up of the fix(deps) commits that the shared preset suppresses
+  # on push, promoted into a single patch release (RELEASE_DEPS).
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC — weekly dependency roll-up
+  # Also sets RELEASE_DEPS, so a manual run is an on-demand dependency sweep.
+  workflow_dispatch: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: jabrown93/ci/.github/workflows/docker-release.yml@63fdb1321ea7e94b330b23d87a9c9961ed6b86b5 # workflows-v1.0.0
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    with:
+      image: ghcr.io/jabrown93/jellyseerr-exporter
+    secrets:
+      APP_ID: ${{ secrets.APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
