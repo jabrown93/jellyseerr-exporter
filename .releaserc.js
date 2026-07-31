@@ -34,6 +34,19 @@ module.exports = {
   plugins: [
     ["@semantic-release/commit-analyzer", { releaseRules: depReleaseRules }],
     "@semantic-release/release-notes-generator",
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        // No release/failure comments or labels: forked history references
+        // upstream PR/issue numbers that do not exist in this repo, and the
+        // plugin's success step hard-fails (404) trying to comment on them --
+        // after the tag and GitHub Release were already created, leaving a
+        // tagged-but-imageless release. Comments are noise here anyway.
+        successComment: false,
+        failComment: false,
+        failTitle: false,
+        releasedLabels: false,
+      },
+    ],
   ],
 };
