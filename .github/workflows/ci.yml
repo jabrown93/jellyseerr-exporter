@@ -1,0 +1,18 @@
+---
+name: CI
+on:
+  - push
+  - pull_request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  build:
+    # go-build is a composite action, so this job owns runs-on. Keep it hosted:
+    # on a fork pull_request the checked-out code is untrusted and `go test`
+    # executes it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jabrown93/ci/actions/go-build@d8a9ae389cb478069165e806cfafa390262c043c # go-build-v1.0.0
