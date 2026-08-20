@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"github.com/opspotes/jellyseerr-exporter/collector"
+	"github.com/opspotes/jellyseerr-exporter/internal/jellyseerr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/willfantom/goverseerr"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 )
 
 // instance to use
-var jellyseerr *goverseerr.Overseerr
+var jellyseerrClient *jellyseerr.Client
 
 var RootCmd = &cobra.Command{
 	Use:   "jellyseerr-exporter",
@@ -55,8 +55,8 @@ var RootCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
-		prometheus.MustRegister(collector.NewRequestCollector(jellyseerr, fullData))
-		prometheus.MustRegister(collector.NewUserCollector(jellyseerr))
+		prometheus.MustRegister(collector.NewRequestCollector(jellyseerrClient, fullData))
+		prometheus.MustRegister(collector.NewUserCollector(jellyseerrClient))
 
 		// Handle Metrics endpoint
 		promHandler := promhttp.Handler()
@@ -88,10 +88,10 @@ func setupLogger() {
 }
 
 func setJellyseerr() {
-	if o, err := goverseerr.NewKeyAuth(jellyseerrAddress, nil, jellyseerrAPILocale, jellyseerrAPIKey); err != nil {
+	if o, err := jellyseerr.NewKeyAuth(jellyseerrAddress, jellyseerrAPILocale, jellyseerrAPIKey); err != nil {
 		logrus.WithField("message", err.Error()).Fatalln("Could not connect to Jellyseerr")
 	} else {
-		jellyseerr = o
+		jellyseerrClient = o
 	}
 }
 

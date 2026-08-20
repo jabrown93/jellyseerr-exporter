@@ -3,9 +3,9 @@ package collector
 import (
 	"time"
 
+	"github.com/opspotes/jellyseerr-exporter/internal/jellyseerr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"github.com/willfantom/goverseerr"
 )
 
 const (
@@ -13,12 +13,12 @@ const (
 )
 
 type UserCollector struct {
-	client *goverseerr.Overseerr
+	client *jellyseerr.Client
 
 	Requests *prometheus.Desc
 }
 
-func NewUserCollector(client *goverseerr.Overseerr) *UserCollector {
+func NewUserCollector(client *jellyseerr.Client) *UserCollector {
 	logrus.Traceln("defining user collector")
 	specificNamespace := "user"
 	return &UserCollector{
@@ -41,7 +41,7 @@ func (rc *UserCollector) Collect(ch chan<- prometheus.Metric) {
 	logrus.Debugln("collecting user data...")
 	start := time.Now()
 
-	var allUsers []*goverseerr.User
+	var allUsers []*jellyseerr.User
 
 	page := 0
 	for {

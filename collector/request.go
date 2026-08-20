@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/opspotes/jellyseerr-exporter/internal/jellyseerr"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"github.com/willfantom/goverseerr"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 )
 
 type RequestCollector struct {
-	client   *goverseerr.Overseerr
+	client   *jellyseerr.Client
 	fullData bool
 
 	Count *prometheus.Desc
@@ -29,7 +29,7 @@ type RequestMetricLabel struct {
 	Genre         string
 }
 
-func NewRequestCollector(client *goverseerr.Overseerr, fullData bool) *RequestCollector {
+func NewRequestCollector(client *jellyseerr.Client, fullData bool) *RequestCollector {
 	logrus.Traceln("defining request collector")
 	specificNamespace := "requests"
 	return &RequestCollector{
@@ -62,7 +62,7 @@ func (rc *RequestCollector) Collect(ch chan<- prometheus.Metric) {
 		company := "not_collected"
 		if rc.fullData {
 			switch request.Media.MediaType {
-			case goverseerr.MediaTypeMovie:
+			case jellyseerr.MediaTypeMovie:
 				if details, err := request.GetMovieDetails(rc.client); err == nil {
 					if len(details.Genres) > 0 {
 						genre = details.Genres[0].Name
@@ -71,7 +71,7 @@ func (rc *RequestCollector) Collect(ch chan<- prometheus.Metric) {
 						company = details.ProductionCompanies[0].Name
 					}
 				}
-			case goverseerr.MediaTypeTV:
+			case jellyseerr.MediaTypeTV:
 				if details, err := request.GetTVDetails(rc.client); err == nil {
 					if len(details.Genres) > 0 {
 						genre = details.Genres[0].Name
@@ -106,12 +106,12 @@ func (rc *RequestCollector) Collect(ch chan<- prometheus.Metric) {
 	logrus.WithField("time_elapsed", elapsed).Debugln("request data collected")
 }
 
-func fetchAllRequests(jellyseerr *goverseerr.Overseerr) []*goverseerr.MediaRequest {
-	var allRequests []*goverseerr.MediaRequest
+func fetchAllRequests(client *jellyseerr.Client) []*jellyseerr.MediaRequest {
+	var allRequests []*jellyseerr.MediaRequest
 	page := 0
 	for {
 		logrus.WithField("page", page).Traceln("fetching request list from jellyseerr")
-		requests, pageInfo, err := jellyseerr.GetRequests(page, requestPageSize, goverseerr.RequestFileterAll, goverseerr.RequestSortAdded)
+		requests, pageInfo, err := client.GetRequests(page, requestPageSize, jellyseerr.RequestFilterAll, jellyseerr.RequestSortAdded)
 		if err != nil {
 			logrus.WithField("page", page).Errorln("failed to get page of media requests from jellyseerr")
 			return nil
