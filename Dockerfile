@@ -1,7 +1,7 @@
 # Static CGO_ENABLED=0 cross-compile on the DHI Go toolchain, scratch runtime,
 # nonroot. go.mod pins go 1.21; -mod=mod lets the current toolchain resolve as
 # needed while go.sum still pins every dependency version.
-FROM --platform=$BUILDPLATFORM dhi.io/golang:1.26.7-alpine-dev@sha256:42c7e83988aaa19969053d0032d6735e1136ad6ec6bbd7c22714c2f29566b7a1 AS builder
+FROM --platform=$BUILDPLATFORM dhi.io/golang:1.27.0-alpine-dev@sha256:76defbbd7307f0b09f0264c30d2e926981debf1d767ef0d93186b6c58dad539a AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
