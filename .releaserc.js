@@ -8,24 +8,23 @@
 // Go repo. Nothing in-repo carries the version (the image tag does), so there
 // is also no changelog/git plugin and no version-bump commit.
 //
-// Routine dependency bumps (fix(deps), from Renovate via the shared preset)
-// do NOT cut a release per merged PR. The weekly scheduled run in
+// Runtime dependency bumps (chore(deps), from Renovate via the shared
+// preset) do NOT cut a release per merged PR. Dev/test/CI dependency bumps
+// (chore(dev-deps)) never release at all. The weekly scheduled run in
 // .github/workflows/release.yml sets RELEASE_DEPS=true, which promotes the
-// accumulated bumps into one patch release. Vulnerability fixes are typed
-// fix(security), so they still release immediately. See jabrown93/.github's
-// README, "Weekly dependency releases".
+// accumulated chore(deps) bumps into one patch release. fix releases
+// immediately, as does fix(security) for vulnerability fixes. See
+// jabrown93/.github's README, "Weekly dependency releases".
 
 const releaseDeps = process.env.RELEASE_DEPS === "true";
 
 const depReleaseRules = [
   // Required: commit-analyzer evaluates every matching custom rule and keeps
-  // the highest release type, so without this a breaking fix(deps)! would
+  // the highest release type, so without this a breaking chore(deps)! would
   // match ONLY the suppression rule below and never release. Listed first so
   // the analyzer short-circuits on major.
-  { type: "fix", scope: "deps", breaking: true, release: "major" },
-  releaseDeps
-    ? { type: "fix", scope: "deps", release: "patch" }
-    : { type: "fix", scope: "deps", release: false },
+  { type: "chore", scope: "deps", breaking: true, release: "major" },
+  { type: "chore", scope: "deps", release: releaseDeps ? "patch" : false },
 ];
 
 module.exports = {
