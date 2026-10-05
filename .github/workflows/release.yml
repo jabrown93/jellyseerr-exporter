@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-  # Weekly roll-up of the fix(deps) commits that the shared preset suppresses
-  # on push, promoted into a single patch release (RELEASE_DEPS).
+  # Weekly roll-up of the chore(deps) commits that the shared preset
+  # suppresses on push, promoted into a single patch release (RELEASE_DEPS).
   schedule:
     - cron: '0 9 * * 1' # Mondays 09:00 UTC — weekly dependency roll-up
   # Also sets RELEASE_DEPS, so a manual run is an on-demand dependency sweep.
