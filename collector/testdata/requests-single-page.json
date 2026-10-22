@@ -1,0 +1,11 @@
+{
+  "pageInfo": {"page": 1, "pages": 1, "results": 1},
+  "results": [
+    {
+      "id": 101,
+      "status": 2,
+      "is4k": true,
+      "media": {"id": 101, "tmdbId": 603, "mediaType": "movie", "status": 5}
+    }
+  ]
+}
