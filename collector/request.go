@@ -18,6 +18,7 @@ type RequestCollector struct {
 	fullData bool
 
 	Count *prometheus.Desc
+	up    *prometheus.Desc
 }
 
 type RequestMetricLabel struct {
@@ -42,22 +43,28 @@ func NewRequestCollector(client *jellyseerr.Client, fullData bool) *RequestColle
 			[]string{"media_type", "is_4k", "request_status", "media_status", "genre", "company"},
 			nil,
 		),
+		up: newUpDesc("requests"),
 	}
 }
 
 func (rc *RequestCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- rc.Count
+	ch <- rc.up
 }
 
 func (rc *RequestCollector) Collect(ch chan<- prometheus.Metric) {
 	logrus.Debug("collecting request data...")
 	start := time.Now()
 
+	allRequests, ok := fetchAllRequests(rc.client)
+	if !ok {
+		ch <- prometheus.MustNewConstMetric(rc.up, prometheus.GaugeValue, 0)
+		return
+	}
+	ch <- prometheus.MustNewConstMetric(rc.up, prometheus.GaugeValue, 1)
+
 	counts := make(map[RequestMetricLabel]int)
-	allRequests := fetchAllRequests(rc.client)
-
 	for _, request := range allRequests {
-
 		genre := "not_collected"
 		company := "not_collected"
 		if rc.fullData {
@@ -106,7 +113,7 @@ func (rc *RequestCollector) Collect(ch chan<- prometheus.Metric) {
 	logrus.WithField("time_elapsed", elapsed).Debugln("request data collected")
 }
 
-func fetchAllRequests(client *jellyseerr.Client) []*jellyseerr.MediaRequest {
+func fetchAllRequests(client *jellyseerr.Client) ([]*jellyseerr.MediaRequest, bool) {
 	var allRequests []*jellyseerr.MediaRequest
 	page := 0
 	for {
@@ -114,7 +121,7 @@ func fetchAllRequests(client *jellyseerr.Client) []*jellyseerr.MediaRequest {
 		requests, pageInfo, err := client.GetRequests(page, requestPageSize, jellyseerr.RequestFilterAll, jellyseerr.RequestSortAdded)
 		if err != nil {
 			logrus.WithField("page", page).Errorln("failed to get page of media requests from jellyseerr")
-			return nil
+			return nil, false
 		}
 		allRequests = append(allRequests, requests...)
 		page++
@@ -123,5 +130,5 @@ func fetchAllRequests(client *jellyseerr.Client) []*jellyseerr.MediaRequest {
 		}
 	}
 	logrus.WithField("total_requests", len(allRequests)).Traceln("fetched all requests from jellyseerr")
-	return allRequests
+	return allRequests, true
 }

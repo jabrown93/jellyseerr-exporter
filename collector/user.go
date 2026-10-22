@@ -16,6 +16,7 @@ type UserCollector struct {
 	client *jellyseerr.Client
 
 	Requests *prometheus.Desc
+	up       *prometheus.Desc
 }
 
 func NewUserCollector(client *jellyseerr.Client) *UserCollector {
@@ -30,11 +31,13 @@ func NewUserCollector(client *jellyseerr.Client) *UserCollector {
 			[]string{"email"},
 			nil,
 		),
+		up: newUpDesc("users"),
 	}
 }
 
 func (rc *UserCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- rc.Requests
+	ch <- rc.up
 }
 
 func (rc *UserCollector) Collect(ch chan<- prometheus.Metric) {
@@ -49,6 +52,7 @@ func (rc *UserCollector) Collect(ch chan<- prometheus.Metric) {
 		users, pageInfo, err := rc.client.GetAllUsers(userPageSize, page)
 		if err != nil {
 			logrus.WithField("page", page).Errorln("failed to get page of users from jellyseerr")
+			ch <- prometheus.MustNewConstMetric(rc.up, prometheus.GaugeValue, 0)
 			return
 		}
 		allUsers = append(allUsers, users...)
@@ -58,6 +62,7 @@ func (rc *UserCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 	logrus.WithField("total_users", len(allUsers)).Traceln("fetched all users from jellyseerr")
+	ch <- prometheus.MustNewConstMetric(rc.up, prometheus.GaugeValue, 1)
 
 	for _, user := range allUsers {
 		ch <- prometheus.MustNewConstMetric(

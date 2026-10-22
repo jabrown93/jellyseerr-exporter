@@ -12,7 +12,11 @@ docker run --rm -p 9850:9850 ghcr.io/opspotes/jellyseerr-exporter:latest \
 
 ## Metrics
 
-Two main metric groups are exported: Requests and Users.
+Three metric groups are exported: Requests, Users, and collector availability.
+
+### Availability
+
+`jellyseerr_up{collector="requests|users"}` reports whether that collector completed all list API pages during the scrape. A failed list query emits only this metric with value `0`; request and user count series are omitted to avoid partial results.
 
 ### Requests
 
