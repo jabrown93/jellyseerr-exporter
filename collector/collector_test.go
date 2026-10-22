@@ -47,8 +47,11 @@ func TestRequestCollectorFullDataPaginatesAndLabelsMetrics(t *testing.T) {
 # TYPE jellyseerr_requests_count gauge
 jellyseerr_requests_count{company="HBO",genre="Drama",is_4k="false",media_status="Processing",media_type="tv",request_status="Pending"} 1
 jellyseerr_requests_count{company="Village Roadshow",genre="Action",is_4k="true",media_status="Available",media_type="movie",request_status="Approved"} 1
+# HELP jellyseerr_up Whether the last Jellyseerr API query for this collector succeeded (1) or failed (0).
+# TYPE jellyseerr_up gauge
+jellyseerr_up{collector="requests"} 1
 `
-	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected), "jellyseerr_requests_count"); err != nil {
+	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected)); err != nil {
 		t.Fatalf("CollectAndCompare: %v", err)
 	}
 
@@ -73,8 +76,11 @@ func TestRequestCollectorWithoutDetailsUsesDefaultLabels(t *testing.T) {
 # HELP jellyseerr_requests_count Number of requests on Jellyseerr
 # TYPE jellyseerr_requests_count gauge
 jellyseerr_requests_count{company="not_collected",genre="not_collected",is_4k="true",media_status="Available",media_type="movie",request_status="Approved"} 1
+# HELP jellyseerr_up Whether the last Jellyseerr API query for this collector succeeded (1) or failed (0).
+# TYPE jellyseerr_up gauge
+jellyseerr_up{collector="requests"} 1
 `
-	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected), "jellyseerr_requests_count"); err != nil {
+	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected)); err != nil {
 		t.Fatalf("CollectAndCompare: %v", err)
 	}
 }
@@ -102,12 +108,15 @@ func TestUserCollectorPaginatesAndLabelsMetrics(t *testing.T) {
 
 	collector := NewUserCollector(client)
 	expected := `
+# HELP jellyseerr_up Whether the last Jellyseerr API query for this collector succeeded (1) or failed (0).
+# TYPE jellyseerr_up gauge
+jellyseerr_up{collector="users"} 1
 # HELP jellyseerr_user_requests Number of requests made by a user
 # TYPE jellyseerr_user_requests gauge
 jellyseerr_user_requests{email="alice@example.com"} 3
 jellyseerr_user_requests{email="bob@example.com"} 7
 `
-	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected), "jellyseerr_user_requests"); err != nil {
+	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected)); err != nil {
 		t.Fatalf("CollectAndCompare: %v", err)
 	}
 
@@ -118,26 +127,78 @@ jellyseerr_user_requests{email="bob@example.com"} 7
 	}
 }
 
-func TestCollectorsEmitNoMetricsWhenAPIRequestFails(t *testing.T) {
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	})
-
-	for _, test := range []struct {
-		name      string
-		collector interface {
-			Collect(chan<- prometheus.Metric)
-			Describe(chan<- *prometheus.Desc)
-		}
+func TestCollectorsReportListAPIFailures(t *testing.T) {
+	for _, failure := range []struct {
+		name  string
+		serve func(http.ResponseWriter)
 	}{
-		{"requests", NewRequestCollector(client, false)},
-		{"users", NewUserCollector(client)},
+		{"server error", func(w http.ResponseWriter) { w.WriteHeader(http.StatusInternalServerError) }},
+		{"malformed JSON", func(w http.ResponseWriter) { _, _ = w.Write([]byte("{")) }},
+		{"unauthorized", func(w http.ResponseWriter) { w.WriteHeader(http.StatusUnauthorized) }},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			if got := testutil.CollectAndCount(test.collector); got != 0 {
-				t.Errorf("metric count = %d, want 0", got)
-			}
+		for _, collector := range collectorFactories {
+			t.Run(failure.name+"/"+collector.name, func(t *testing.T) {
+				client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+					failure.serve(w)
+				})
+				assertCollectorDown(t, collector.new(client), collector.name)
+			})
+		}
+	}
+}
+
+func TestCollectorsReportLaterPageFailures(t *testing.T) {
+	for _, collector := range collectorFactories {
+		t.Run(collector.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("skip") == "0" {
+					serveCollectorFixture(t, w, collector.firstPage)
+					return
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+			})
+			assertCollectorDown(t, collector.new(client), collector.name)
 		})
+	}
+}
+
+func TestCollectorsRegisterUpMetric(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"pageInfo":{"pages":1},"results":[]}`))
+	})
+	registry := prometheus.NewPedanticRegistry()
+	if err := registry.Register(NewRequestCollector(client, false)); err != nil {
+		t.Fatalf("register request collector: %v", err)
+	}
+	if err := registry.Register(NewUserCollector(client)); err != nil {
+		t.Fatalf("register user collector: %v", err)
+	}
+	if _, err := registry.Gather(); err != nil {
+		t.Fatalf("gather collectors: %v", err)
+	}
+}
+
+type collectorFactory struct {
+	name      string
+	firstPage string
+	new       func(*jellyseerr.Client) prometheus.Collector
+}
+
+var collectorFactories = []collectorFactory{
+	{"requests", "requests-page-0.json", func(client *jellyseerr.Client) prometheus.Collector { return NewRequestCollector(client, false) }},
+	{"users", "users-page-0.json", func(client *jellyseerr.Client) prometheus.Collector { return NewUserCollector(client) }},
+}
+
+func assertCollectorDown(t *testing.T, collector prometheus.Collector, name string) {
+	t.Helper()
+	expected := `
+# HELP jellyseerr_up Whether the last Jellyseerr API query for this collector succeeded (1) or failed (0).
+# TYPE jellyseerr_up gauge
+jellyseerr_up{collector="` + name + `"} 0
+`
+	if err := testutil.CollectAndCompare(collector, strings.NewReader(expected)); err != nil {
+		t.Fatalf("CollectAndCompare: %v", err)
 	}
 }
 
