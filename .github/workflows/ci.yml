@@ -22,4 +22,4 @@ jobs:
     # executes it.
     runs-on: ubuntu-latest
     steps:
-      - uses: jabrown93/ci/actions/go-build@8fe0eb3180145756cdb71b2fd38a419ec981a226 # go-build-v1.0.1
+      - uses: jabrown93/ci/actions/go-build@014f5ebf27cc04d4d4a66a8ac7f0d7e7bde72e1c # go-build-v1.0.2
